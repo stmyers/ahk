@@ -1,0 +1,5 @@
+# AutoHotkey & Windows Temp Files
+*.tmp
+*.log
+ahk_pnp_status.txt
+ahk_pnp_enum.txt
