@@ -7,6 +7,9 @@ A collection of custom AutoHotkey (v2 & v1) scripts for Windows automation, hard
 ### 🖐️ [Touchscreen Toggle](TouchscreenToggle/)
 An ultra-fast, silent script to toggle your Windows touchscreen ON and OFF with custom dark-mode On-Screen Display (OSD) notifications.
 
+> [!NOTE]
+> Created for the **GPD Win Max 2 (2024)** (Goodix `GXTP7385` touchscreen digitizer). Any failure to automatically enumerate hardware will fall back to the GPD Win Max 2 default hardware instance ID.
+
 - **Hotkey**: <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd>
 - **Features**: Fast `< 50ms` execution via `pnputil.exe`, zero console window flashing, includes UAC-free Task Scheduler auto-start on boot.
 - [View Touchscreen Toggle Documentation](TouchscreenToggle/README.md)

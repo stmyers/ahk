@@ -2,6 +2,9 @@
 
 An ultra-fast, silent AutoHotkey script to instantly enable or disable the touchscreen on Windows 10 & 11 with a modern On-Screen Display (OSD) notification.
 
+> [!NOTE]
+> This script was created specifically for the **GPD Win Max 2 (2024)** (Goodix `GXTP7385` touchscreen controller). While it dynamically auto-detects touchscreen devices on any PC, any failure to enumerate hardware will automatically fall back to the GPD Win Max 2 hardware instance ID (`HID\GXTP7385&COL01\4&36625B9A&2&0000`).
+
 ---
 
 ## Features
