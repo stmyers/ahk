@@ -3,6 +3,7 @@
 ; Script:       Fn Lock Toggle with Custom Dynamic Tray Icon & Sleek OSD
 ; Description:  Toggles software Fn Lock to switch top-row F1-F12 keys
 ;               between standard Function keys and Multimedia controls.
+; Device:       Configured for GPD Win Max 2 (2024) keyboard layout
 ; Requirement:  AutoHotkey v2.0+, Windows 10/11
 ; Author:       Antigravity AI
 ; ==============================================================================

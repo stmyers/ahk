@@ -7,6 +7,9 @@ A collection of custom AutoHotkey (v2 & v1) scripts for Windows automation, hard
 ### ⌨️ [Fn Lock Toggle](FnLockToggle/)
 A script to toggle Fn Lock mode, remapping top-row F1-F12 keys to media, volume, and brightness controls with custom dark-mode On-Screen Display (OSD) notifications.
 
+> [!NOTE]
+> Configured for the **GPD Win Max 2 (2024)** keyboard layout legends.
+
 - **Hotkey**: <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>L</kbd>
 - **Features**: Custom sleek OSD toast popup, media/volume/brightness control remappings, UAC-free Task Scheduler auto-start on boot.
 - [View Fn Lock Toggle Documentation](FnLockToggle/README.md)

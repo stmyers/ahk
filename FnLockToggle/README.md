@@ -2,6 +2,9 @@
 
 A lightweight AutoHotkey v2 script to toggle **Fn Lock** mode on keyboards and laptops, featuring a custom dark-mode On-Screen Display (OSD) notification.
 
+> [!NOTE]
+> The default `F1`-`F12` Fn layer key mappings are configured specifically for the **GPD Win Max 2 (2024)** keyboard layout.
+
 ---
 
 ## Features
