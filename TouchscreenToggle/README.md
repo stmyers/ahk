@@ -11,8 +11,8 @@ An ultra-fast, silent AutoHotkey script to instantly enable or disable the touch
 
 - 🖐️ **Instant Touchscreen Toggle**: Press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd> to switch touchscreen ON or OFF (< 50ms latency).
 - 🎨 **Sleek Dark-Mode OSD Notification**: Modern floating toast popup at top-center of the screen.
+- 🟢 **Dynamic System Tray Icon**: Real-time tray icon (`TS`) with status dot (🟢 ON / 🔴 OFF) and hover tooltip.
 - ⚡ **Zero-Flash Execution**: Operates completely silently without console window popups (`CREATE_NO_WINDOW`).
-- 🔄 **Quick Reload**: Press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>R</kbd> to reload the script at any time.
 - 🚀 **Silent Boot Auto-Start**: Includes a PowerShell setup script to run elevated on boot via Windows Task Scheduler **without UAC prompts**.
 
 ---
@@ -40,9 +40,8 @@ An ultra-fast, silent AutoHotkey script to instantly enable or disable the touch
 | Shortcut | Action |
 |---|---|
 | <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd> | Toggle Touchscreen ON / OFF |
-| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>R</kbd> | Reload AutoHotkey Script |
 
-*To customize hotkeys, open `ToggleTouchscreen.ahk` in any text editor and change lines 39-40 (`^!t` = Ctrl+Alt+T, `^!r` = Ctrl+Alt+R).*
+*To customize hotkey, open `ToggleTouchscreen.ahk` in any text editor and change line 37 (`^!t` = Ctrl+Alt+T).*
 
 ---
 

@@ -4,6 +4,15 @@ A collection of custom AutoHotkey (v2 & v1) scripts for Windows automation, hard
 
 ## Repositories & Scripts Included
 
+### ⌨️ [Fn Lock Toggle](FnLockToggle/)
+A script to toggle Fn Lock mode, remapping top-row F1-F12 keys to media, volume, and brightness controls with custom dark-mode On-Screen Display (OSD) notifications.
+
+- **Hotkey**: <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>L</kbd>
+- **Features**: Custom sleek OSD toast popup, media/volume/brightness control remappings, UAC-free Task Scheduler auto-start on boot.
+- [View Fn Lock Toggle Documentation](FnLockToggle/README.md)
+
+---
+
 ### 🖐️ [Touchscreen Toggle](TouchscreenToggle/)
 An ultra-fast, silent script to toggle your Windows touchscreen ON and OFF with custom dark-mode On-Screen Display (OSD) notifications.
 

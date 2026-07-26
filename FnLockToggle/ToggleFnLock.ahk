@@ -1,151 +1,98 @@
 #Requires AutoHotkey v2.0
 ; ==============================================================================
-; Script:       Ultra-Fast & Completely Silent Touch Screen Toggle
-; Description:  Enables or Disables the Windows Touch Screen device instantly
-;               and silently without flashing console windows.
+; Script:       Fn Lock Toggle with Custom Dynamic Tray Icon & Sleek OSD
+; Description:  Toggles software Fn Lock to switch top-row F1-F12 keys
+;               between standard Function keys and Multimedia controls.
 ; Requirement:  AutoHotkey v2.0+, Windows 10/11
 ; Author:       Antigravity AI
 ; ==============================================================================
 
 #SingleInstance Force
 
-; Automatically request Administrator privileges (required for PnP device management)
-if not A_IsAdmin {
-    try {
-        if A_IsCompiled
-            Run('*RunAs "' A_ScriptFullPath '"')
-        else
-            Run('*RunAs "' A_AhkPath '" /restart "' A_ScriptFullPath '"')
-    }
-    ExitApp()
-}
+; Global state tracking Fn Lock status
+global fnLockEnabled := false
 
-; Global cache for Touchscreen Instance ID
-global touchInstanceId := ""
-
-; Pre-cache Touchscreen Instance ID & set initial Tray Icon on startup
-SetTimer(InitDeviceCache, -10)
-
-InitDeviceCache() {
-    global touchInstanceId
-    touchInstanceId := GetTouchscreenInstanceId()
-    if (touchInstanceId != "") {
-        status := GetDeviceStatus(touchInstanceId)
-        UpdateTrayIcon(status == "Started" || status == "OK")
-    }
-}
+; Initialize Tray Icon on startup
+UpdateTrayIcon(fnLockEnabled)
 
 ; ------------------------------------------------------------------------------
 ; HOTKEY ASSIGNMENT
-; Ctrl + Alt + T = Toggle Touchscreen
+; Ctrl + Alt + L = Toggle Fn Lock
 ; ------------------------------------------------------------------------------
-^!t::ToggleTouchscreen()
+^!l::ToggleFnLock()
 
 ; ------------------------------------------------------------------------------
-; FUNCTION: Ultra-Fast & Silent Touchscreen Toggle
+; FUNCTION: Toggle Fn Lock State, Tray Icon & OSD Notification
 ; ------------------------------------------------------------------------------
-ToggleTouchscreen() {
-    global touchInstanceId
+ToggleFnLock() {
+    global fnLockEnabled
+    fnLockEnabled := !fnLockEnabled
     
-    if (touchInstanceId == "")
-        touchInstanceId := GetTouchscreenInstanceId()
-
-    if (touchInstanceId == "") {
-        ShowToast("Error", "⚠️ Touchscreen device not found", "Error")
-        return
-    }
-
-    ; Fast check of current device status using silent pnputil
-    status := GetDeviceStatus(touchInstanceId)
+    UpdateTrayIcon(fnLockEnabled)
     
-    if (status == "Started" || status == "OK") {
-        ; Update Tray Icon & Show Toast
-        UpdateTrayIcon(false)
-        ShowToast("Touch Screen Disabled", "🖐️  Touchscreen OFF", "Disabled")
-        
-        ; Execute disable completely silently with CREATE_NO_WINDOW
-        RunSilent('pnputil /disable-device "' touchInstanceId '"')
+    if (fnLockEnabled) {
+        ShowToast("Fn Lock Enabled", "⌨️  Fn Lock ON", "Enabled")
     } else {
-        ; Update Tray Icon & Show Toast
-        UpdateTrayIcon(true)
-        ShowToast("Touch Screen Enabled", "🖐️  Touchscreen ON", "Enabled")
-        
-        ; Execute enable completely silently with CREATE_NO_WINDOW
-        RunSilent('pnputil /enable-device "' touchInstanceId '"')
+        ShowToast("Fn Lock Disabled", "⌨️  Fn Lock OFF", "Disabled")
     }
 }
 
 ; ------------------------------------------------------------------------------
-; HELPER: Execute Console Command Completely Silently (CREATE_NO_WINDOW mode 0)
+; RE-MAPPED TOP ROW KEYS (Active only when Fn Lock is ENABLED)
 ; ------------------------------------------------------------------------------
-RunSilent(cmd) {
+#HotIf fnLockEnabled
+
+*F1::ShowBrightnessToast(AdjustBrightness(-10))
+*F2::ShowBrightnessToast(AdjustBrightness(10))
+*F3::Send("{Volume_Mute}")
+*F4::Send("{Volume_Down}")
+*F5::Send("{Volume_Up}")
+*F6::Send("{Media_Stop}")
+*F7::Send("{Media_Prev}")
+*F8::Send("{Media_Play_Pause}")
+*F9::Send("{Media_Next}")
+*F10::Send("{PrintScreen}")
+*F11::Send("{ScrollLock}")
+*F12::Send("{Insert}")
+
+#HotIf
+
+ShowBrightnessToast(level) {
+    if (level >= 0)
+        ShowToast("Brightness", "☀️  Brightness " . level . "%", "Enabled")
+}
+
+; ------------------------------------------------------------------------------
+; HELPER: Adjust Screen Brightness via WMI
+; ------------------------------------------------------------------------------
+AdjustBrightness(change) {
+    newBrightness := -1
     try {
-        shell := ComObject("WScript.Shell")
-        shell.Run(cmd, 0, true)
-    }
-}
-
-; ------------------------------------------------------------------------------
-; HELPER: Query Device Status via silent pnputil execution (CREATE_NO_WINDOW mode 0)
-; ------------------------------------------------------------------------------
-GetDeviceStatus(instanceId) {
-    tmpFile := A_Temp "\ahk_pnp_status.txt"
-    try FileDelete(tmpFile)
-    
-    shell := ComObject("WScript.Shell")
-    shell.Run('cmd.exe /c pnputil /enum-devices /instanceid "' instanceId '" > "' tmpFile '"', 0, true)
-    
-    if FileExist(tmpFile) {
-        try {
-            output := FileRead(tmpFile)
-            FileDelete(tmpFile)
-            if InStr(output, "Disabled")
-                return "Disabled"
-            else if InStr(output, "Started")
-                return "Started"
+        wmi := ComObjGet("winmgmts:\\.\root\wmi")
+        methods := wmi.ExecQuery("SELECT * FROM WmiMonitorBrightnessMethods")
+        currentObj := wmi.ExecQuery("SELECT * FROM WmiMonitorBrightness")
+        
+        currentBrightness := 50
+        for item in currentObj {
+            currentBrightness := item.CurrentBrightness
+            break
+        }
+        
+        newBrightness := Max(0, Min(100, currentBrightness + change))
+        
+        for method in methods {
+            method.WmiSetBrightness(1, newBrightness)
         }
     }
-    return "Unknown"
-}
-
-; ------------------------------------------------------------------------------
-; HELPER: Auto-detect Touchscreen Instance ID completely silently
-; ------------------------------------------------------------------------------
-GetTouchscreenInstanceId() {
-    tmpFile := A_Temp "\ahk_pnp_enum.txt"
-    try FileDelete(tmpFile)
-
-    shell := ComObject("WScript.Shell")
-    shell.Run('cmd.exe /c pnputil /enum-devices /class HIDClass > "' tmpFile '"', 0, true)
-
-    if FileExist(tmpFile) {
-        try {
-            output := FileRead(tmpFile)
-            FileDelete(tmpFile)
-
-            lines := StrSplit(output, "`n", "`r")
-            currentId := ""
-            
-            for line in lines {
-                if RegExMatch(line, "i)Instance ID:\s*(.+)", &m) {
-                    currentId := Trim(m[1])
-                } else if RegExMatch(line, "i)Device Description:\s*.*touch\s*screen", &m) {
-                    if (currentId != "")
-                        return currentId
-                }
-            }
-        }
-    }
-    
-    return "HID\GXTP7385&COL01\4&36625B9A&2&0000"
+    return newBrightness
 }
 
 ; ------------------------------------------------------------------------------
 ; HELPER: Dynamic Tray Icon Generator
 ; ------------------------------------------------------------------------------
 UpdateTrayIcon(isEnabled) {
-    A_IconTip := "Touchscreen: " . (isEnabled ? "ON" : "OFF")
-    hIcon := CreateStateIcon("TS", isEnabled)
+    A_IconTip := "Fn Lock: " . (isEnabled ? "ON" : "OFF")
+    hIcon := CreateStateIcon("Fn", isEnabled)
     if (hIcon) {
         TraySetIcon("HICON:" . hIcon)
     }
@@ -223,7 +170,7 @@ CreateStateIcon(label, isEnabled) {
 }
 
 ; ------------------------------------------------------------------------------
-; FUNCTION: Sleek Custom Toast Notification
+; FUNCTION: Sleek Custom Toast Notification (OSD)
 ; ------------------------------------------------------------------------------
 ShowToast(title, message, status := "Info") {
     static toastGui := ""

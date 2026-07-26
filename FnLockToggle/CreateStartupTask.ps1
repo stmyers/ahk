@@ -1,7 +1,7 @@
 # ==============================================================================
-# Script:       Register Portable Boot Task for Touchscreen Toggle
-# Description:  Creates a Windows Scheduled Task to run ToggleTouchscreen.ahk
-#               as Administrator at logon WITHOUT UAC prompts on any system.
+# Script:       Register Portable Boot Task for Fn Lock Toggle
+# Description:  Creates a Windows Scheduled Task to run ToggleFnLock.ahk
+#               at logon WITHOUT UAC prompts on any system.
 # ==============================================================================
 
 # Self-elevate the script if not running as Administrator
@@ -31,8 +31,8 @@ if (-not $ahkExe) {
 }
 
 # Dynamically resolve script path relative to this PowerShell script location
-$scriptPath = Join-Path $PSScriptRoot "ToggleTouchscreen.ahk"
-$taskName = "AutoHotkey_ToggleTouchscreen"
+$scriptPath = Join-Path $PSScriptRoot "ToggleFnLock.ahk"
+$taskName = "AutoHotkey_ToggleFnLock"
 
 if (-not (Test-Path $ahkExe)) {
     Write-Error "AutoHotkey v2 executable not found on system!"

@@ -22,7 +22,6 @@ if not A_IsAdmin {
 global touchInstanceId := "HID\GXTP7385&COL01\4&36625B9A&2&0000"
 
 ^!t::ToggleTouchscreen()
-^!r::Reload
 
 ToggleTouchscreen() {
     status := GetDeviceStatus(touchInstanceId)
