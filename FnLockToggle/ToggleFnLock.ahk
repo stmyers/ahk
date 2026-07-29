@@ -13,14 +13,31 @@
 ; Global state tracking Fn Lock status
 global fnLockEnabled := false
 
-; Initialize Tray Icon on startup
+; Set up System Tray Menu
+A_TrayMenu.Delete()
+A_TrayMenu.Add("Toggle Fn Lock`tCtrl+Alt+L", (*) => ToggleFnLock())
+A_TrayMenu.Default := "Toggle Fn Lock`tCtrl+Alt+L"
+A_TrayMenu.Add()
+A_TrayMenu.Add("Reload Script`tCtrl+Alt+R", (*) => Reload())
+A_TrayMenu.Add("Exit", (*) => ExitApp())
+
+; Initialize Tray Icon & set delayed refresh timers for Explorer startup
 UpdateTrayIcon(fnLockEnabled)
+SetTimer(RefreshTrayIcon, -3000)
+SetTimer(RefreshTrayIcon, -10000)
+
+RefreshTrayIcon() {
+    global fnLockEnabled
+    UpdateTrayIcon(fnLockEnabled)
+}
 
 ; ------------------------------------------------------------------------------
-; HOTKEY ASSIGNMENT
+; HOTKEY ASSIGNMENTS
 ; Ctrl + Alt + L = Toggle Fn Lock
+; Ctrl + Alt + R = Reload Script
 ; ------------------------------------------------------------------------------
 ^!l::ToggleFnLock()
+^!r::Reload()
 
 ; ------------------------------------------------------------------------------
 ; FUNCTION: Toggle Fn Lock State, Tray Icon & OSD Notification
@@ -92,10 +109,10 @@ AdjustBrightness(change) {
 ; HELPER: Dynamic Tray Icon Generator
 ; ------------------------------------------------------------------------------
 UpdateTrayIcon(isEnabled) {
-    A_IconTip := "Fn Lock: " . (isEnabled ? "ON" : "OFF")
+    A_IconTip := "Fn Lock: " . (isEnabled ? "ON" : "OFF") . " (Ctrl+Alt+L)"
     hIcon := CreateStateIcon("Fn", isEnabled)
     if (hIcon) {
-        TraySetIcon("HICON:" . hIcon)
+        try TraySetIcon("HICON:" . hIcon)
     }
 }
 
