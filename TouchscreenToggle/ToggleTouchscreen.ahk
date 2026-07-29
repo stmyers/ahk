@@ -21,25 +21,42 @@ if not A_IsAdmin {
 }
 
 ; Global cache for Touchscreen Instance ID
-global touchInstanceId := ""
+global touchInstanceId := "HID\GXTP7385&COL01\4&36625B9A&2&0000"
 
-; Pre-cache Touchscreen Instance ID & set initial Tray Icon on startup
+; Set up System Tray Menu
+A_TrayMenu.Delete()
+A_TrayMenu.Add("Toggle Touchscreen`tCtrl+Alt+T", (*) => ToggleTouchscreen())
+A_TrayMenu.Default := "Toggle Touchscreen`tCtrl+Alt+T"
+A_TrayMenu.Add()
+A_TrayMenu.Add("Reload Script`tCtrl+Alt+R", (*) => Reload())
+A_TrayMenu.Add("Exit", (*) => ExitApp())
+
+; Pre-cache Touchscreen Instance ID & ensure Tray Icon renders after Explorer boot
 SetTimer(InitDeviceCache, -10)
+SetTimer(RefreshTrayIcon, -3000)
+SetTimer(RefreshTrayIcon, -10000)
 
 InitDeviceCache() {
     global touchInstanceId
-    touchInstanceId := GetTouchscreenInstanceId()
-    if (touchInstanceId != "") {
-        status := GetDeviceStatus(touchInstanceId)
-        UpdateTrayIcon(status == "Started" || status == "OK")
-    }
+    detectedId := GetTouchscreenInstanceId()
+    if (detectedId != "")
+        touchInstanceId := detectedId
+    RefreshTrayIcon()
+}
+
+RefreshTrayIcon() {
+    global touchInstanceId
+    status := GetDeviceStatus(touchInstanceId)
+    UpdateTrayIcon(status == "Started" || status == "OK")
 }
 
 ; ------------------------------------------------------------------------------
-; HOTKEY ASSIGNMENT
+; HOTKEY ASSIGNMENTS
 ; Ctrl + Alt + T = Toggle Touchscreen
+; Ctrl + Alt + R = Reload Script
 ; ------------------------------------------------------------------------------
 ^!t::ToggleTouchscreen()
+^!r::Reload()
 
 ; ------------------------------------------------------------------------------
 ; FUNCTION: Ultra-Fast & Silent Touchscreen Toggle
@@ -50,28 +67,23 @@ ToggleTouchscreen() {
     if (touchInstanceId == "")
         touchInstanceId := GetTouchscreenInstanceId()
 
-    if (touchInstanceId == "") {
-        ShowToast("Error", "⚠️ Touchscreen device not found", "Error")
-        return
-    }
-
     ; Fast check of current device status using silent pnputil
     status := GetDeviceStatus(touchInstanceId)
     
     if (status == "Started" || status == "OK") {
-        ; Update Tray Icon & Show Toast
+        ; Touchscreen is currently ON -> Disable it
         UpdateTrayIcon(false)
         ShowToast("Touch Screen Disabled", "🖐️  Touchscreen OFF", "Disabled")
         
-        ; Execute disable completely silently with CREATE_NO_WINDOW
+        ; Disable touchscreen interface
         RunSilent('pnputil /disable-device "' touchInstanceId '"')
     } else {
-        ; Update Tray Icon & Show Toast
+        ; Touchscreen is currently OFF / Disabled / Disconnected -> Enable it
         UpdateTrayIcon(true)
         ShowToast("Touch Screen Enabled", "🖐️  Touchscreen ON", "Enabled")
         
-        ; Execute enable completely silently with CREATE_NO_WINDOW
-        RunSilent('pnputil /enable-device "' touchInstanceId '"')
+        ; Enable parent I2C bus controller AND touchscreen interface
+        RunSilent('cmd.exe /c pnputil /enable-device "ACPI\GXTP7385\3&c8c3232&0" & pnputil /enable-device "' touchInstanceId '"')
     }
 }
 
@@ -99,10 +111,12 @@ GetDeviceStatus(instanceId) {
         try {
             output := FileRead(tmpFile)
             FileDelete(tmpFile)
-            if InStr(output, "Disabled")
-                return "Disabled"
-            else if InStr(output, "Started")
+            if InStr(output, "Started")
                 return "Started"
+            else if InStr(output, "Disabled")
+                return "Disabled"
+            else if InStr(output, "Disconnected")
+                return "Disconnected"
         }
     }
     return "Unknown"
@@ -137,6 +151,7 @@ GetTouchscreenInstanceId() {
         }
     }
     
+    ; Fallback default for GPD Win Max 2 (2024) Goodix touchscreen
     return "HID\GXTP7385&COL01\4&36625B9A&2&0000"
 }
 
@@ -144,10 +159,10 @@ GetTouchscreenInstanceId() {
 ; HELPER: Dynamic Tray Icon Generator
 ; ------------------------------------------------------------------------------
 UpdateTrayIcon(isEnabled) {
-    A_IconTip := "Touchscreen: " . (isEnabled ? "ON" : "OFF")
+    A_IconTip := "Touchscreen: " . (isEnabled ? "ON" : "OFF") . " (Ctrl+Alt+T)"
     hIcon := CreateStateIcon("TS", isEnabled)
     if (hIcon) {
-        TraySetIcon("HICON:" . hIcon)
+        try TraySetIcon("HICON:" . hIcon)
     }
 }
 

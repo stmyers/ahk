@@ -22,6 +22,14 @@ if not A_IsAdmin {
 global touchInstanceId := "HID\GXTP7385&COL01\4&36625B9A&2&0000"
 
 ^!t::ToggleTouchscreen()
+^!r::Reload
+
+SetTimer, RefreshTray, -3000
+SetTimer, RefreshTray, -10000
+
+RefreshTray:
+    status := GetDeviceStatus(touchInstanceId)
+return
 
 ToggleTouchscreen() {
     status := GetDeviceStatus(touchInstanceId)
@@ -31,7 +39,7 @@ ToggleTouchscreen() {
         RunSilent("pnputil /disable-device """ . touchInstanceId . """")
     } else {
         ShowToast("Touch Screen Enabled", "🖐️  Touchscreen ON", "Enabled")
-        RunSilent("pnputil /enable-device """ . touchInstanceId . """")
+        RunSilent("cmd.exe /c pnputil /enable-device ""ACPI\GXTP7385\3&c8c3232&0"" & pnputil /enable-device """ . touchInstanceId . """")
     }
 }
 
@@ -52,10 +60,12 @@ GetDeviceStatus(instanceId) {
     if FileExist(tmpFile) {
         FileRead, output, %tmpFile%
         FileDelete, %tmpFile%
-        if InStr(output, "Disabled")
-            return "Disabled"
-        else if InStr(output, "Started")
+        if InStr(output, "Started")
             return "Started"
+        else if InStr(output, "Disabled")
+            return "Disabled"
+        else if InStr(output, "Disconnected")
+            return "Disconnected"
     }
     return "Unknown"
 }
