@@ -105,13 +105,14 @@ AdjustBrightness(change) {
     return newBrightness
 }
 
+; ------------------------------------------------------------------------------
+; HELPER: Custom .ico Tray Icon Loader
+; ------------------------------------------------------------------------------
 UpdateTrayIcon(isEnabled) {
     A_IconTip := "Fn Lock: " . (isEnabled ? "ON" : "OFF") . " (Ctrl+Alt+L)"
-    try {
-        if (isEnabled)
-            TraySetIcon("shell32.dll", 198) ; Keyboard / Lock Icon
-        else
-            TraySetIcon("shell32.dll", 45)  ; Standard Keyboard Icon
+    iconFile := A_ScriptDir . "\" . (isEnabled ? "fn_on.ico" : "fn_off.ico")
+    if FileExist(iconFile) {
+        try TraySetIcon(iconFile)
     }
 }
 

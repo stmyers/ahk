@@ -145,22 +145,13 @@ GetTouchscreenInstanceId() {
 }
 
 ; ------------------------------------------------------------------------------
-; HELPER: Tray Icon Generator
+; HELPER: Custom .ico Tray Icon Loader
 ; ------------------------------------------------------------------------------
 UpdateTrayIcon(isEnabled) {
     A_IconTip := "Touchscreen: " . (isEnabled ? "ON" : "OFF") . " (Ctrl+Alt+T)"
-    try {
-        if (isEnabled)
-            TraySetIcon("imageres.dll", 100) ; Clean Touch Display Icon
-        else
-            TraySetIcon("imageres.dll", 98)  ; Disabled Display Icon
-    } catch {
-        try {
-            if (isEnabled)
-                TraySetIcon("shell32.dll", 16)
-            else
-                TraySetIcon("shell32.dll", 110)
-        }
+    iconFile := A_ScriptDir . "\" . (isEnabled ? "touch_on.ico" : "touch_off.ico")
+    if FileExist(iconFile) {
+        try TraySetIcon(iconFile)
     }
 }
 
