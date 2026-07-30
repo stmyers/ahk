@@ -37,10 +37,10 @@ RefreshTrayIcon() {
 ; ------------------------------------------------------------------------------
 ; HOTKEY ASSIGNMENTS
 ; Ctrl + Alt + L = Toggle Fn Lock
-; Ctrl + Alt + R = Reload Script
+; Ctrl + Alt + R = Reload Script (Pass-through ~ to reload all AHK scripts)
 ; ------------------------------------------------------------------------------
 ^!l::ToggleFnLock()
-^!r::Reload()
+~^!r::Reload()
 
 ; ------------------------------------------------------------------------------
 ; FUNCTION: Toggle Fn Lock State, Tray Icon & OSD Notification

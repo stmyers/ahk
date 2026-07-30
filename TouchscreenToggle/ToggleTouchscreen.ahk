@@ -57,10 +57,10 @@ RefreshTrayIcon() {
 ; ------------------------------------------------------------------------------
 ; HOTKEY ASSIGNMENTS
 ; Ctrl + Alt + T = Toggle Touchscreen
-; Ctrl + Alt + R = Reload Script
+; Ctrl + Alt + R = Reload Script (Pass-through ~ to reload all AHK scripts)
 ; ------------------------------------------------------------------------------
 ^!t::ToggleTouchscreen()
-^!r::Reload()
+~^!r::Reload()
 
 ; ------------------------------------------------------------------------------
 ; FUNCTION: Ultra-Fast & Silent Touchscreen Toggle
