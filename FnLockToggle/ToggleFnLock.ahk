@@ -21,10 +21,26 @@ A_TrayMenu.Add()
 A_TrayMenu.Add("Reload Script`tCtrl+Alt+R", (*) => Reload())
 A_TrayMenu.Add("Exit", (*) => ExitApp())
 
-; Initialize Tray Icon & set delayed refresh timers for Explorer startup
-UpdateTrayIcon(fnLockEnabled)
-SetTimer(RefreshTrayIcon, -3000)
-SetTimer(RefreshTrayIcon, -10000)
+; Listen for Windows Explorer TaskbarCreated message (fires when Explorer loads/restarts)
+global msgTaskbarCreated := DllCall("RegisterWindowMessage", "Str", "TaskbarCreated")
+if (msgTaskbarCreated) {
+    OnMessage(msgTaskbarCreated, (*) => SetTimer(ForceReaddTrayIcon, -500))
+}
+
+; Startup timers to forcibly re-register Tray Icon in System Tray during boot
+SetTimer(ForceReaddTrayIcon, -1000)
+SetTimer(ForceReaddTrayIcon, -3000)
+SetTimer(ForceReaddTrayIcon, -7000)
+SetTimer(ForceReaddTrayIcon, -15000)
+
+ForceReaddTrayIcon() {
+    try {
+        A_IconHidden := true
+        Sleep(50)
+        A_IconHidden := false
+        RefreshTrayIcon()
+    }
+}
 
 RefreshTrayIcon() {
     global fnLockEnabled

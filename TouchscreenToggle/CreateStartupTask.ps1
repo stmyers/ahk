@@ -4,15 +4,6 @@
 #               as Administrator at logon WITHOUT UAC prompts on any system.
 # ==============================================================================
 
-# Self-elevate the script if not running as Administrator
-$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "Requesting Administrator privileges to register Scheduled Task..." -ForegroundColor Yellow
-    $psExe = (Get-Process -Id $PID).Path
-    Start-Process $psExe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Wait
-    exit
-}
-
 # Dynamically locate AutoHotkey v2 executable using system environment variables
 $ahkExe = (Get-Command AutoHotkey64.exe -ErrorAction SilentlyContinue).Path
 
@@ -47,11 +38,12 @@ if (-not (Test-Path $scriptPath)) {
 # Unregister previous task instance if present
 Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
 
-# Register new Task Scheduler task using current logon user environment
+# Register new Task Scheduler task using current logon user environment with 3s delay for Explorer startup
 $action = New-ScheduledTaskAction -Execute $ahkExe -Argument "`"$scriptPath`""
 $trigger = New-ScheduledTaskTrigger -AtLogOn
+$trigger.Delay = "PT3S"
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit 0
 
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force -ErrorAction Stop
-Write-Host "Task '$taskName' successfully registered for user '$env:USERNAME'!" -ForegroundColor Green
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force
+Write-Output "Task '$taskName' successfully registered for user '$env:USERNAME'!"

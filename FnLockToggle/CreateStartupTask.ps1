@@ -47,9 +47,10 @@ if (-not (Test-Path $scriptPath)) {
 # Unregister previous task instance if present
 Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
 
-# Register new Task Scheduler task using current logon user environment
+# Register new Task Scheduler task using current logon user environment with 3s delay for Explorer startup
 $action = New-ScheduledTaskAction -Execute $ahkExe -Argument "`"$scriptPath`""
 $trigger = New-ScheduledTaskTrigger -AtLogOn
+$trigger.Delay = "PT3S"
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit 0
 

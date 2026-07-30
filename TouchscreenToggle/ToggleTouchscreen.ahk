@@ -31,17 +31,34 @@ A_TrayMenu.Add()
 A_TrayMenu.Add("Reload Script`tCtrl+Alt+R", (*) => Reload())
 A_TrayMenu.Add("Exit", (*) => ExitApp())
 
-; Pre-cache Touchscreen Instance ID & ensure Tray Icon renders after Explorer boot
+; Listen for Windows Explorer TaskbarCreated message (fires when Explorer loads/restarts)
+global msgTaskbarCreated := DllCall("RegisterWindowMessage", "Str", "TaskbarCreated")
+if (msgTaskbarCreated) {
+    OnMessage(msgTaskbarCreated, (*) => SetTimer(ForceReaddTrayIcon, -500))
+}
+
+; Startup timers to forcibly re-register Tray Icon in System Tray during boot
 SetTimer(InitDeviceCache, -10)
-SetTimer(RefreshTrayIcon, -3000)
-SetTimer(RefreshTrayIcon, -10000)
+SetTimer(ForceReaddTrayIcon, -1000)
+SetTimer(ForceReaddTrayIcon, -3000)
+SetTimer(ForceReaddTrayIcon, -7000)
+SetTimer(ForceReaddTrayIcon, -15000)
 
 InitDeviceCache() {
     global touchInstanceId
     detectedId := GetTouchscreenInstanceId()
     if (detectedId != "")
         touchInstanceId := detectedId
-    RefreshTrayIcon()
+    ForceReaddTrayIcon()
+}
+
+ForceReaddTrayIcon() {
+    try {
+        A_IconHidden := true
+        Sleep(50)
+        A_IconHidden := false
+        RefreshTrayIcon()
+    }
 }
 
 RefreshTrayIcon() {
