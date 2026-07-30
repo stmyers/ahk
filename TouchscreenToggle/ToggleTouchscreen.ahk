@@ -2,12 +2,13 @@
 ; ==============================================================================
 ; Script:       Ultra-Fast & Completely Silent Touch Screen Toggle
 ; Description:  Enables or Disables the Windows Touch Screen device instantly
-;               and silently without flashing console windows.
+;               and silently with dark-mode OSD and System Tray icon.
 ; Requirement:  AutoHotkey v2.0+, Windows 10/11
 ; Author:       Antigravity AI
 ; ==============================================================================
 
 #SingleInstance Force
+Persistent(true)
 
 ; Automatically request Administrator privileges (required for PnP device management)
 if not A_IsAdmin {
@@ -20,6 +21,9 @@ if not A_IsAdmin {
     ExitApp()
 }
 
+; Ensure System Tray Icon is visible
+A_IconHidden := false
+
 ; Global cache for Touchscreen Instance ID
 global touchInstanceId := "HID\GXTP7385&COL01\4&36625B9A&2&0000"
 
@@ -31,34 +35,17 @@ A_TrayMenu.Add()
 A_TrayMenu.Add("Reload Script`tCtrl+Alt+R", (*) => Reload())
 A_TrayMenu.Add("Exit", (*) => ExitApp())
 
-; Listen for Windows Explorer TaskbarCreated message (fires when Explorer loads/restarts)
-global msgTaskbarCreated := DllCall("RegisterWindowMessage", "Str", "TaskbarCreated")
-if (msgTaskbarCreated) {
-    OnMessage(msgTaskbarCreated, (*) => SetTimer(ForceReaddTrayIcon, -500))
-}
-
-; Startup timers to forcibly re-register Tray Icon in System Tray during boot
+; Pre-cache Touchscreen Instance ID & update Tray Icon
 SetTimer(InitDeviceCache, -10)
-SetTimer(ForceReaddTrayIcon, -1000)
-SetTimer(ForceReaddTrayIcon, -3000)
-SetTimer(ForceReaddTrayIcon, -7000)
-SetTimer(ForceReaddTrayIcon, -15000)
+SetTimer(RefreshTrayIcon, -2000)
+SetTimer(RefreshTrayIcon, -6000)
 
 InitDeviceCache() {
     global touchInstanceId
     detectedId := GetTouchscreenInstanceId()
     if (detectedId != "")
         touchInstanceId := detectedId
-    ForceReaddTrayIcon()
-}
-
-ForceReaddTrayIcon() {
-    try {
-        A_IconHidden := true
-        Sleep(50)
-        A_IconHidden := false
-        RefreshTrayIcon()
-    }
+    RefreshTrayIcon()
 }
 
 RefreshTrayIcon() {
@@ -84,29 +71,21 @@ ToggleTouchscreen() {
     if (touchInstanceId == "")
         touchInstanceId := GetTouchscreenInstanceId()
 
-    ; Fast check of current device status using silent pnputil
     status := GetDeviceStatus(touchInstanceId)
     
     if (status == "Started" || status == "OK") {
         ; Touchscreen is currently ON -> Disable it
         UpdateTrayIcon(false)
         ShowToast("Touch Screen Disabled", "🖐️  Touchscreen OFF", "Disabled")
-        
-        ; Disable touchscreen interface
         RunSilent('pnputil /disable-device "' touchInstanceId '"')
     } else {
-        ; Touchscreen is currently OFF / Disabled / Disconnected -> Enable it
+        ; Touchscreen is currently OFF -> Enable it
         UpdateTrayIcon(true)
         ShowToast("Touch Screen Enabled", "🖐️  Touchscreen ON", "Enabled")
-        
-        ; Enable parent I2C bus controller AND touchscreen interface
         RunSilent('cmd.exe /c pnputil /enable-device "ACPI\GXTP7385\3&c8c3232&0" & pnputil /enable-device "' touchInstanceId '"')
     }
 }
 
-; ------------------------------------------------------------------------------
-; HELPER: Execute Console Command Completely Silently (CREATE_NO_WINDOW mode 0)
-; ------------------------------------------------------------------------------
 RunSilent(cmd) {
     try {
         shell := ComObject("WScript.Shell")
@@ -114,9 +93,6 @@ RunSilent(cmd) {
     }
 }
 
-; ------------------------------------------------------------------------------
-; HELPER: Query Device Status via silent pnputil execution (CREATE_NO_WINDOW mode 0)
-; ------------------------------------------------------------------------------
 GetDeviceStatus(instanceId) {
     tmpFile := A_Temp "\ahk_pnp_status.txt"
     try FileDelete(tmpFile)
@@ -139,9 +115,6 @@ GetDeviceStatus(instanceId) {
     return "Unknown"
 }
 
-; ------------------------------------------------------------------------------
-; HELPER: Auto-detect Touchscreen Instance ID completely silently
-; ------------------------------------------------------------------------------
 GetTouchscreenInstanceId() {
     tmpFile := A_Temp "\ahk_pnp_enum.txt"
     try FileDelete(tmpFile)
@@ -168,95 +141,29 @@ GetTouchscreenInstanceId() {
         }
     }
     
-    ; Fallback default for GPD Win Max 2 (2024) Goodix touchscreen
     return "HID\GXTP7385&COL01\4&36625B9A&2&0000"
 }
 
 ; ------------------------------------------------------------------------------
-; HELPER: Dynamic Tray Icon Generator
+; HELPER: Tray Icon Generator
 ; ------------------------------------------------------------------------------
 UpdateTrayIcon(isEnabled) {
     A_IconTip := "Touchscreen: " . (isEnabled ? "ON" : "OFF") . " (Ctrl+Alt+T)"
-    hIcon := CreateStateIcon("TS", isEnabled)
-    if (hIcon) {
-        try TraySetIcon("HICON:" . hIcon)
+    try {
+        if (isEnabled)
+            TraySetIcon("imageres.dll", 100) ; Clean Touch Display Icon
+        else
+            TraySetIcon("imageres.dll", 98)  ; Disabled Display Icon
+    } catch {
+        try {
+            if (isEnabled)
+                TraySetIcon("shell32.dll", 16)
+            else
+                TraySetIcon("shell32.dll", 110)
+        }
     }
 }
 
-CreateStateIcon(label, isEnabled) {
-    width := 32
-    height := 32
-    
-    hdc := DllCall("GetDC", "Ptr", 0, "Ptr")
-    memDC := DllCall("CreateCompatibleDC", "Ptr", hdc, "Ptr")
-    hBmp := DllCall("CreateCompatibleBitmap", "Ptr", hdc, "Int", width, "Int", height, "Ptr")
-    oldBmp := DllCall("SelectObject", "Ptr", memDC, "Ptr", hBmp, "Ptr")
-    
-    maskDC := DllCall("CreateCompatibleDC", "Ptr", hdc, "Ptr")
-    hMaskBmp := DllCall("CreateBitmap", "Int", width, "Int", height, "UInt", 1, "UInt", 1, "Ptr", 0, "Ptr")
-    oldMaskBmp := DllCall("SelectObject", "Ptr", maskDC, "Ptr", hMaskBmp, "Ptr")
-    
-    DllCall("ReleaseDC", "Ptr", 0, "Ptr", hdc)
-    
-    bgColor := 0x1E1E1E
-    bgrAccent := isEnabled ? 0x4DFF88 : 0x4D4DFF
-    textColor := isEnabled ? 0xFFFFFF : 0x888888
-    
-    hBrushBg := DllCall("CreateSolidBrush", "UInt", bgColor, "Ptr")
-    rect := Buffer(16, 0)
-    NumPut("Int", 0, rect, 0)
-    NumPut("Int", 0, rect, 4)
-    NumPut("Int", width, rect, 8)
-    NumPut("Int", height, rect, 12)
-    DllCall("FillRect", "Ptr", memDC, "Ptr", rect, "Ptr", hBrushBg)
-    DllCall("DeleteObject", "Ptr", hBrushBg)
-    
-    hBrushDot := DllCall("CreateSolidBrush", "UInt", bgrAccent, "Ptr")
-    oldBrush := DllCall("SelectObject", "Ptr", memDC, "Ptr", hBrushDot, "Ptr")
-    DllCall("Ellipse", "Ptr", memDC, "Int", 20, "Int", 20, "Int", 30, "Int", 30)
-    DllCall("SelectObject", "Ptr", memDC, "Ptr", oldBrush)
-    DllCall("DeleteObject", "Ptr", hBrushDot)
-    
-    DllCall("SetBkMode", "Ptr", memDC, "Int", 1)
-    DllCall("SetTextColor", "Ptr", memDC, "UInt", textColor)
-    hFont := DllCall("CreateFontW", "Int", -16, "Int", 0, "Int", 0, "Int", 0, "Int", 700, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0, "Str", "Segoe UI", "Ptr")
-    oldFont := DllCall("SelectObject", "Ptr", memDC, "Ptr", hFont, "Ptr")
-    
-    textRect := Buffer(16, 0)
-    NumPut("Int", 1, textRect, 0)
-    NumPut("Int", 5, textRect, 4)
-    NumPut("Int", 21, textRect, 8)
-    NumPut("Int", 25, textRect, 12)
-    DllCall("DrawTextW", "Ptr", memDC, "Str", label, "Int", -1, "Ptr", textRect, "UInt", 0x1)
-    
-    DllCall("SelectObject", "Ptr", memDC, "Ptr", oldFont)
-    DllCall("DeleteObject", "Ptr", hFont)
-    
-    hBrushMask := DllCall("CreateSolidBrush", "UInt", 0, "Ptr")
-    DllCall("FillRect", "Ptr", maskDC, "Ptr", rect, "Ptr", hBrushMask)
-    DllCall("DeleteObject", "Ptr", hBrushMask)
-    
-    DllCall("SelectObject", "Ptr", memDC, "Ptr", oldBmp)
-    DllCall("SelectObject", "Ptr", maskDC, "Ptr", oldMaskBmp)
-    DllCall("DeleteDC", "Ptr", memDC)
-    DllCall("DeleteDC", "Ptr", maskDC)
-    
-    iconInfo := Buffer(A_PtrSize == 8 ? 32 : 20, 0)
-    NumPut("Int", 1, iconInfo, 0)
-    NumPut("Ptr", hMaskBmp, iconInfo, A_PtrSize == 8 ? 16 : 12)
-    NumPut("Ptr", hBmp, iconInfo, A_PtrSize == 8 ? 24 : 16)
-    
-    hIcon := DllCall("CreateIconIndirect", "Ptr", iconInfo, "Ptr")
-    
-    DllCall("DeleteObject", "Ptr", hBmp)
-    DllCall("DeleteObject", "Ptr", hMaskBmp)
-    
-    return hIcon
-}
-
-; ------------------------------------------------------------------------------
-; FUNCTION: Sleek Custom Toast Notification
-; ------------------------------------------------------------------------------
 ShowToast(title, message, status := "Info") {
     static toastGui := ""
     

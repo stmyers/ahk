@@ -52,7 +52,7 @@ $action = New-ScheduledTaskAction -Execute $ahkExe -Argument "`"$scriptPath`""
 $trigger = New-ScheduledTaskTrigger -AtLogOn
 $trigger.Delay = "PT3S"
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
-$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit 0
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit 0 -MultipleInstances StopExisting
 
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force -ErrorAction Stop
 Write-Host "Task '$taskName' successfully registered for user '$env:USERNAME'!" -ForegroundColor Green

@@ -9,6 +9,9 @@
 ; ==============================================================================
 
 #SingleInstance Force
+Persistent(true)
+
+A_IconHidden := false
 
 ; Global state tracking Fn Lock status
 global fnLockEnabled := false
@@ -21,26 +24,10 @@ A_TrayMenu.Add()
 A_TrayMenu.Add("Reload Script`tCtrl+Alt+R", (*) => Reload())
 A_TrayMenu.Add("Exit", (*) => ExitApp())
 
-; Listen for Windows Explorer TaskbarCreated message (fires when Explorer loads/restarts)
-global msgTaskbarCreated := DllCall("RegisterWindowMessage", "Str", "TaskbarCreated")
-if (msgTaskbarCreated) {
-    OnMessage(msgTaskbarCreated, (*) => SetTimer(ForceReaddTrayIcon, -500))
-}
-
-; Startup timers to forcibly re-register Tray Icon in System Tray during boot
-SetTimer(ForceReaddTrayIcon, -1000)
-SetTimer(ForceReaddTrayIcon, -3000)
-SetTimer(ForceReaddTrayIcon, -7000)
-SetTimer(ForceReaddTrayIcon, -15000)
-
-ForceReaddTrayIcon() {
-    try {
-        A_IconHidden := true
-        Sleep(50)
-        A_IconHidden := false
-        RefreshTrayIcon()
-    }
-}
+; Update Tray Icon on startup
+UpdateTrayIcon(fnLockEnabled)
+SetTimer(RefreshTrayIcon, -2000)
+SetTimer(RefreshTrayIcon, -6000)
 
 RefreshTrayIcon() {
     global fnLockEnabled
@@ -96,9 +83,6 @@ ShowBrightnessToast(level) {
         ShowToast("Brightness", "☀️  Brightness " . level . "%", "Enabled")
 }
 
-; ------------------------------------------------------------------------------
-; HELPER: Adjust Screen Brightness via WMI
-; ------------------------------------------------------------------------------
 AdjustBrightness(change) {
     newBrightness := -1
     try {
@@ -121,91 +105,16 @@ AdjustBrightness(change) {
     return newBrightness
 }
 
-; ------------------------------------------------------------------------------
-; HELPER: Dynamic Tray Icon Generator
-; ------------------------------------------------------------------------------
 UpdateTrayIcon(isEnabled) {
     A_IconTip := "Fn Lock: " . (isEnabled ? "ON" : "OFF") . " (Ctrl+Alt+L)"
-    hIcon := CreateStateIcon("Fn", isEnabled)
-    if (hIcon) {
-        try TraySetIcon("HICON:" . hIcon)
+    try {
+        if (isEnabled)
+            TraySetIcon("shell32.dll", 198) ; Keyboard / Lock Icon
+        else
+            TraySetIcon("shell32.dll", 45)  ; Standard Keyboard Icon
     }
 }
 
-CreateStateIcon(label, isEnabled) {
-    width := 32
-    height := 32
-    
-    hdc := DllCall("GetDC", "Ptr", 0, "Ptr")
-    memDC := DllCall("CreateCompatibleDC", "Ptr", hdc, "Ptr")
-    hBmp := DllCall("CreateCompatibleBitmap", "Ptr", hdc, "Int", width, "Int", height, "Ptr")
-    oldBmp := DllCall("SelectObject", "Ptr", memDC, "Ptr", hBmp, "Ptr")
-    
-    maskDC := DllCall("CreateCompatibleDC", "Ptr", hdc, "Ptr")
-    hMaskBmp := DllCall("CreateBitmap", "Int", width, "Int", height, "UInt", 1, "UInt", 1, "Ptr", 0, "Ptr")
-    oldMaskBmp := DllCall("SelectObject", "Ptr", maskDC, "Ptr", hMaskBmp, "Ptr")
-    
-    DllCall("ReleaseDC", "Ptr", 0, "Ptr", hdc)
-    
-    bgColor := 0x1E1E1E
-    bgrAccent := isEnabled ? 0x4DFF88 : 0x4D4DFF
-    textColor := isEnabled ? 0xFFFFFF : 0x888888
-    
-    hBrushBg := DllCall("CreateSolidBrush", "UInt", bgColor, "Ptr")
-    rect := Buffer(16, 0)
-    NumPut("Int", 0, rect, 0)
-    NumPut("Int", 0, rect, 4)
-    NumPut("Int", width, rect, 8)
-    NumPut("Int", height, rect, 12)
-    DllCall("FillRect", "Ptr", memDC, "Ptr", rect, "Ptr", hBrushBg)
-    DllCall("DeleteObject", "Ptr", hBrushBg)
-    
-    hBrushDot := DllCall("CreateSolidBrush", "UInt", bgrAccent, "Ptr")
-    oldBrush := DllCall("SelectObject", "Ptr", memDC, "Ptr", hBrushDot, "Ptr")
-    DllCall("Ellipse", "Ptr", memDC, "Int", 20, "Int", 20, "Int", 30, "Int", 30)
-    DllCall("SelectObject", "Ptr", memDC, "Ptr", oldBrush)
-    DllCall("DeleteObject", "Ptr", hBrushDot)
-    
-    DllCall("SetBkMode", "Ptr", memDC, "Int", 1)
-    DllCall("SetTextColor", "Ptr", memDC, "UInt", textColor)
-    hFont := DllCall("CreateFontW", "Int", -16, "Int", 0, "Int", 0, "Int", 0, "Int", 700, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0, "Str", "Segoe UI", "Ptr")
-    oldFont := DllCall("SelectObject", "Ptr", memDC, "Ptr", hFont, "Ptr")
-    
-    textRect := Buffer(16, 0)
-    NumPut("Int", 1, textRect, 0)
-    NumPut("Int", 5, textRect, 4)
-    NumPut("Int", 21, textRect, 8)
-    NumPut("Int", 25, textRect, 12)
-    DllCall("DrawTextW", "Ptr", memDC, "Str", label, "Int", -1, "Ptr", textRect, "UInt", 0x1)
-    
-    DllCall("SelectObject", "Ptr", memDC, "Ptr", oldFont)
-    DllCall("DeleteObject", "Ptr", hFont)
-    
-    hBrushMask := DllCall("CreateSolidBrush", "UInt", 0, "Ptr")
-    DllCall("FillRect", "Ptr", maskDC, "Ptr", rect, "Ptr", hBrushMask)
-    DllCall("DeleteObject", "Ptr", hBrushMask)
-    
-    DllCall("SelectObject", "Ptr", memDC, "Ptr", oldBmp)
-    DllCall("SelectObject", "Ptr", maskDC, "Ptr", oldMaskBmp)
-    DllCall("DeleteDC", "Ptr", memDC)
-    DllCall("DeleteDC", "Ptr", maskDC)
-    
-    iconInfo := Buffer(A_PtrSize == 8 ? 32 : 20, 0)
-    NumPut("Int", 1, iconInfo, 0)
-    NumPut("Ptr", hMaskBmp, iconInfo, A_PtrSize == 8 ? 16 : 12)
-    NumPut("Ptr", hBmp, iconInfo, A_PtrSize == 8 ? 24 : 16)
-    
-    hIcon := DllCall("CreateIconIndirect", "Ptr", iconInfo, "Ptr")
-    
-    DllCall("DeleteObject", "Ptr", hBmp)
-    DllCall("DeleteObject", "Ptr", hMaskBmp)
-    
-    return hIcon
-}
-
-; ------------------------------------------------------------------------------
-; FUNCTION: Sleek Custom Toast Notification (OSD)
-; ------------------------------------------------------------------------------
 ShowToast(title, message, status := "Info") {
     static toastGui := ""
     
